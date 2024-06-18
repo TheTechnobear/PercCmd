@@ -36,6 +36,9 @@ ofc, this can be overriden in the perccmd.json, but if all else fails this is wh
 this is the hardcoded defaults for fail safe.
 
 
+# Testing/Status
+tested on xmx, it should work on SSP without issue... 
+
 
 # possible future changes
 ### environment
@@ -44,7 +47,6 @@ however, changing perccmd.sh needs a new image as its in /root
 also it may be some apps need different environment var.
 we could allow optional configuration in perccmd.json
 (or perhaps we could just (optionally) source a shell script prior to launch.)
-
 
 # open questions 
 ### perccmd.sh
