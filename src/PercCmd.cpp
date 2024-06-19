@@ -8,7 +8,6 @@
 #include <unistd.h>
 
 #include <fstream>
-#include <signal.h>
 
 #include "cJSON.h"
 
@@ -32,7 +31,29 @@ public:
 
 private:
     int buttonFD_ = -1;
-    bool map(char* keyMap, int code) { return keyMap[code / 8] & (1 << (code % 8)); }
+#ifdef TARGET_XMX
+    bool map(char* keyMap, int btn) { return keyMap[(59 + btn) / 8] & (1 << (code % 8)); }
+#else
+    bool map(char* keyMap, int btn) {
+        if (btn == 0)
+            return keyMap[11] & 0b00000001;
+        else if (btn == 1)
+            return keyMap[10] & 0b10000000;
+        else if (btn == 2)
+            return keyMap[8] & 0b00010000;
+        else if (btn == 3)
+            return keyMap[8] & 0b00001000;
+        else if (btn == 4)
+            return keyMap[8] & 0b00000001;
+        else if (btn == 5)
+            return keyMap[7] & 0b10000000;
+        else if (btn == 6)
+            return keyMap[7] & 0b01000000;
+        else if (btn == 7)
+            return keyMap[7] & 0b00100000;
+        return false;
+    }
+#endif
 };
 
 
@@ -52,7 +73,7 @@ bool Hardware::init() {
 }
 
 int Hardware::getButtonState() {
-    const int MAX_KEYS = 80;
+    const int MAX_KEYS = 120;
     const int MAP_SIZE = MAX_KEYS / 8 + 1;
 
     char key_map[MAP_SIZE];  //  Create a byte array the size of the number of keys
@@ -62,7 +83,7 @@ int Hardware::getButtonState() {
 
     int mask = 0;
     for (int i = 0; i < 8; i++) {
-        if (map(key_map, 59 + i)) { mask |= (1 << i); }
+        if (map(key_map, i)) { mask |= (1 << i); }
     }
     return mask;
 }
@@ -76,7 +97,7 @@ void intHandler(int sig) {
     if (sig == SIGINT) {
         log("Received SIGINT");
         keepRunning = 0;
-        if(pid>0) kill(pid, SIGKILL);
+        if (pid > 0) kill(pid, SIGKILL);
     }
 }
 

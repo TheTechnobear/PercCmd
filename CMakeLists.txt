@@ -16,6 +16,21 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif ()
 endif ()
 
+
+if(DEFINED ENV{TARGET_XMX} OR TARGET_XMX)
+    message("target : XMX, using compact ui, scale 1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTARGET_XMX=1 -DCOMPACT_UI_SCALE=1 -DFORCE_COMPACT_UI=1")
+else()
+    if (DEFINED ENV{ALWAYS_COMPACT_UI} OR ALWAYS_COMPACT_UI)
+        set(ALWAYS_COMPACT_UI 1)
+        message("target : SSP, forced compact ui, scale 1")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTARGET_SSP=1 -DCOMPACT_UI_SCALE=1 -DFORCE_COMPACT_UI=1")
+    else()
+        message("target : SSP, ssp ui and scale")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTARGET_SSP=1 -DCOMPACT_UI_SCALE=2")
+    endif() 
+endif()
+
 set(SOURCES
     src/PercCmd.cpp
     external/cJSON/cJSON.c
