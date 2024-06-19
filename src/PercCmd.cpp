@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <fstream>
+#include <signal.h>
 
 #include "cJSON.h"
 
@@ -67,6 +68,7 @@ int Hardware::getButtonState() {
 }
 
 
+int pid = 0;
 bool keepRunning = true;
 
 void intHandler(int sig) {
@@ -74,6 +76,7 @@ void intHandler(int sig) {
     if (sig == SIGINT) {
         log("Received SIGINT");
         keepRunning = 0;
+        if(pid>0) kill(pid, SIGKILL);
     }
 }
 
@@ -197,9 +200,9 @@ int main(int argc, char** argv) {
     close(confFD);
 
     // we will keep restart the app if it fails
-    // we have a graceful shutdown on SIGINT / exit 
+    // we have a graceful shutdown on SIGINT / exit
     while (keepRunning) {
-        auto pid = fork();
+        pid = fork();
         if (pid > 0) {
             // this process
             int status = 0;
@@ -207,11 +210,18 @@ int main(int argc, char** argv) {
             log("exit code " + std::to_string(status));
             if (WIFEXITED(status)) {
                 int exit_status = WEXITSTATUS(status);
-                if (WIFEXITED(status)) {
-                    int exit_status = WEXITSTATUS(status);
-                    keepRunning = exit_status != 0;
+                if (exit_status == 0) {
+                    log("Child process exited normally, exiting");
+                } else {
+                    sleep(1);
+                    log("Child process exited, restarting");
+                    keepRunning = true;
                 }
+            } else {
+                sleep(1);
+                log("Child process failed, restarting");
             }
+            pid = 0;
         } else {
             // new child, i.e app
             chdir(wd.c_str());
@@ -219,7 +229,6 @@ int main(int argc, char** argv) {
             execl("/bin/sh", "sh", "-c", command.c_str(), NULL);
         }
     }
-
 
     // been told to stop, block SIGINT, to allow clean termination
     sigemptyset(&sigset);
