@@ -32,7 +32,7 @@ public:
 private:
     int buttonFD_ = -1;
 #ifdef TARGET_XMX
-    bool map(char* keyMap, int btn) { return keyMap[(59 + btn) / 8] & (1 << (code % 8)); }
+    bool map(char* keyMap, int btn) { return keyMap[(59 + btn) / 8] & (1 << (btn % 8)); }
 #else
     bool map(char* keyMap, int btn) {
         if (btn == 0)
