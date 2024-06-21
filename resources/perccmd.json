@@ -7,7 +7,7 @@
 		},
 		{
 			"command": "./TraxHost",
-			"directory": "/media/BOOT/Trax"
+			"directory": "/media/BOOT"
 		}
 	]
 }
