@@ -15,7 +15,7 @@ perccmd will default to /media/BOOT/Synthor if anything fails.
 
 # installation
 copy resources/S90perccmd to /etc/init.d/
-copy resources/perccmd.sh to /root
+copy resources/perccmd.sh to /media/BOOT
 copy resources/perccmd.json to /media/BOOT
 
 PercCmd binary should be copied to /media/BOOT
@@ -48,7 +48,4 @@ also it may be some apps need different environment var.
 we could allow optional configuration in perccmd.json
 (or perhaps we could just (optionally) source a shell script prior to launch.)
 
-# open questions 
-### perccmd.sh
-should we move perccmd.sh -> /media/BOOT
 
