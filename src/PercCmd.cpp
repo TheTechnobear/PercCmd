@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <cstring>
 #include <fstream>
 
 #include "cJSON.h"
@@ -18,6 +20,61 @@ void log(const std::string& m) {
 
 void error(const std::string& m) {
     log("ERROR: " + m);
+}
+
+bool writeLastButtonDurable(const char* path, int cmd) {
+    unsigned char value = static_cast<unsigned char>(cmd);
+
+    int fd = open(path, O_CREAT | O_WRONLY | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0) {
+        error("Failed to open " + std::string(path) + ": " + std::strerror(errno));
+        return false;
+    }
+
+    ssize_t total = 0;
+    while (total < 1) {
+        ssize_t n = write(fd, &value + total, 1 - total);
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            error("Failed to write " + std::string(path) + ": " + std::strerror(errno));
+            close(fd);
+            return false;
+        }
+        total += n;
+    }
+
+    if (fsync(fd) != 0) {
+        error("Failed to fsync " + std::string(path) + ": " + std::strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    if (close(fd) != 0) {
+        error("Failed to close " + std::string(path) + ": " + std::strerror(errno));
+        return false;
+    }
+
+    // Ensure file create/truncate metadata is persisted (important on removable media/FAT).
+    int dirFd = open(".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (dirFd < 0) {
+        error("Failed to open containing directory for " + std::string(path) + ": " + std::strerror(errno));
+        return false;
+    }
+
+    if (fsync(dirFd) != 0) {
+        error("Failed to fsync containing directory for " + std::string(path) + ": " + std::strerror(errno));
+        close(dirFd);
+        return false;
+    }
+
+    if (close(dirFd) != 0) {
+        error("Failed to close containing directory for " + std::string(path) + ": " + std::strerror(errno));
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -207,11 +264,10 @@ int main(int argc, char** argv) {
                             // and write the last button to ./lastBtn
                             command = jCmd->valuestring;
                             wd = jWd->valuestring;
-                            auto lastRunFD = open("./lastBtn", O_CREAT | O_WRONLY | O_TRUNC);
-                            if (lastRunFD >= 0) {
-                                log("Write last run button: " + std::to_string(cmd));
-                                write(lastRunFD, &cmd, 1);
-                                close(lastRunFD);
+                            if (writeLastButtonDurable("./lastBtn", cmd)) {
+                                log("Write and fsync last run button: " + std::to_string(cmd));
+                            } else {
+                                error("Failed to persist ./lastBtn");
                             }
                         }
                     }
