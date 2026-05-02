@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
     auto confFD = open("./perccmd.json", O_RDONLY);
     if (confFD >= 0) {
         char buffer[1024];
-        auto len = read(confFD, buffer, 1024);
+        auto len = read(confFD, buffer, 1023);
         if (len > 0) {
             buffer[len] = 0;
             cJSON* root = cJSON_Parse(buffer);
@@ -240,6 +240,15 @@ int main(int argc, char** argv) {
                     cJSON* jObj = cJSON_GetArrayItem(jCmds, cmd);
                     cJSON* jCmd = cJSON_GetObjectItem(jObj, "command");
                     cJSON* jWd = cJSON_GetObjectItem(jObj, "directory");
+                    cJSON* jArgs = cJSON_GetObjectItem(jObj, "args");
+                    std::string args;
+                    if (jArgs) {
+                        if (jArgs->type == cJSON_String && jArgs->valuestring) {
+                            args = jArgs->valuestring;
+                        } else {
+                            error("args field is not a string, ignoring");
+                        }
+                    }
                     if (jCmd && jWd) {
                         // validate the config values are reasonable
                         bool ok = true;
@@ -263,6 +272,7 @@ int main(int argc, char** argv) {
                             // ok, we are good to go, set the command and working directory
                             // and write the last button to ./lastBtn
                             command = jCmd->valuestring;
+                            if (!args.empty()) command += " " + args;
                             wd = jWd->valuestring;
                             if (writeLastButtonDurable("./lastBtn", cmd)) {
                                 log("Write and fsync last run button: " + std::to_string(cmd));
@@ -276,7 +286,7 @@ int main(int argc, char** argv) {
             cJSON_Delete(root);
         }
     }
-    close(confFD);
+    if (confFD >= 0) close(confFD);
 
     // we will keep restart the app if it fails
     // we have a graceful shutdown on SIGINT / exit
@@ -306,6 +316,7 @@ int main(int argc, char** argv) {
             chdir(wd.c_str());
             log("Command: " + command + " in " + wd);
             execl("/bin/sh", "sh", "-c", command.c_str(), NULL);
+            exit(1);
         }
     }
 
